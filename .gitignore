@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.pdf
+*.docx
+Dorcas Literature/
+dist/
+.DS_Store
