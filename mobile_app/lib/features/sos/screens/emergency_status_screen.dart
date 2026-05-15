@@ -34,7 +34,38 @@ class EmergencyStatusScreen extends ConsumerWidget {
       ),
       body: alertAsync.when(
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.signal_wifi_off_rounded, size: 64, color: AppColors.primary),
+                const SizedBox(height: 16),
+                const Text(
+                  'Connection Error',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'We encountered a problem connecting to the emergency server. Please try again.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => ref.refresh(latestAlertProvider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    minimumSize: const Size(200, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('RETRY CONNECTION', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ),
         data: (alert) {
           if (alert == null) {
             return const Center(child: Text('No active alerts.'));
@@ -42,6 +73,7 @@ class EmergencyStatusScreen extends ConsumerWidget {
 
           final status = (alert['status'] ?? 'pending').toString().toLowerCase();
           final isAccepted = status == 'accepted' || status == 'dispatched';
+          final isOnSite = status == 'on_site';
           
           return Stack(
             children: [
@@ -56,26 +88,27 @@ class EmergencyStatusScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
-                              color: isAccepted ? Colors.green.shade50 : AppColors.primary.withOpacity(0.05),
+                              color: isOnSite ? Colors.blue.shade50 : isAccepted ? Colors.green.shade50 : AppColors.primary.withOpacity(0.05),
                               shape: BoxShape.circle,
                               boxShadow: [
-                                if (isAccepted) BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 20, spreadRadius: 5),
+                                if (isOnSite) BoxShadow(color: Colors.blue.withOpacity(0.2), blurRadius: 20, spreadRadius: 5),
+                                if (isAccepted && !isOnSite) BoxShadow(color: Colors.green.withOpacity(0.2), blurRadius: 20, spreadRadius: 5),
                               ],
                             ),
                             child: Icon(
-                              isAccepted ? Icons.check_circle_rounded : Icons.pending_rounded,
-                              color: isAccepted ? Colors.green : AppColors.primary,
+                              isOnSite ? Icons.person_pin_circle_rounded : isAccepted ? Icons.check_circle_rounded : Icons.pending_rounded,
+                              color: isOnSite ? Colors.blue : isAccepted ? Colors.green : AppColors.primary,
                               size: 64,
                             ),
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            isAccepted ? 'Help is on the way!' : 'Distress Signal Sent',
+                            isOnSite ? 'Help has Arrived!' : isAccepted ? 'Help is on the way!' : 'Distress Signal Sent',
                             style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: -1),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            isAccepted ? 'Dr. Ahmed has accepted your request.' : 'Waiting for responder assignment...',
+                            isOnSite ? 'Your responder is now at your location.' : isAccepted ? 'Dr. Ahmed has accepted your request.' : 'Waiting for responder assignment...',
                             textAlign: TextAlign.center,
                             style: const TextStyle(color: AppColors.textSecondary, fontSize: 16, fontWeight: FontWeight.bold),
                           ),
@@ -100,10 +133,10 @@ class EmergencyStatusScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.baseline,
                             textBaseline: TextBaseline.alphabetic,
                             children: [
-                              Text(
-                                isAccepted ? '02' : '--',
-                                style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold, letterSpacing: -2),
-                              ),
+                          Text(
+                            isOnSite ? '00' : isAccepted ? '02' : '--',
+                            style: const TextStyle(fontSize: 64, fontWeight: FontWeight.bold, letterSpacing: -2),
+                          ),
                               const SizedBox(width: 4),
                               const Text('min', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey)),
                             ],

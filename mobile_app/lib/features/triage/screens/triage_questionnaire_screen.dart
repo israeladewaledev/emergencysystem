@@ -37,7 +37,12 @@ class _TriageQuestionnaireScreenState extends ConsumerState<TriageQuestionnaireS
     },
     {
       'question': 'Select emergency severity level:',
-      'options': ['Critical (Life Threatening)', 'Major (High Urgency)', 'Minor (Low Urgency)'],
+      'options': [
+        'Critical (Red) — Life Threatening',
+        'Urgent (Orange) — Very Urgent',
+        'Standard (Yellow) — Urgent',
+        'Minor (Green) — Non-Urgent',
+      ],
       'icon': Icons.priority_high_rounded,
     },
   ];
@@ -248,20 +253,41 @@ class _TriageQuestionnaireScreenState extends ConsumerState<TriageQuestionnaireS
       return;
     }
 
-    // Final Submission
+      // Final Submission
     try {
+      print('--- SOS DEBUG START ---');
+      print('Category: $_category');
+      print('Raw Severity Answer: ${_answers[3]}');
+
+      // Map selected severity option to MTS tier
+      final rawSeverity = _answers[3] ?? 'Standard (Yellow) — Urgent';
+      String severity;
+      if (rawSeverity.startsWith('Critical')) {
+        severity = 'Critical';
+      } else if (rawSeverity.startsWith('Urgent (Orange)')) {
+        severity = 'High';
+      } else if (rawSeverity.startsWith('Standard (Yellow)')) {
+        severity = 'Medium';
+      } else {
+        severity = 'Low';
+      }
+
+      print('Mapped Severity: $severity');
+      print('Calling SOS Service...');
+
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
 
-      final severity = _answers[3] ?? 'Major'; // Map based on question 4
-      
       await ref.read(sosServiceProvider).triggerSOS(
         category: _category,
-        severity: severity.split(' ').first, // Just get "Critical", "Major", etc.
+        severity: severity,
       );
+
+      print('SOS Service Call Successful');
+      print('--- SOS DEBUG END ---');
 
       if (mounted) {
         Navigator.pop(context); // Pop loading
@@ -271,6 +297,9 @@ class _TriageQuestionnaireScreenState extends ConsumerState<TriageQuestionnaireS
         );
       }
     } catch (e) {
+      print('--- SOS DEBUG ERROR ---');
+      print('Error detail: $e');
+      print('--- SOS DEBUG END ---');
       if (mounted) {
         Navigator.pop(context); // Pop loading
         ScaffoldMessenger.of(context).showSnackBar(

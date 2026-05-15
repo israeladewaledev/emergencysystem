@@ -14,6 +14,18 @@ Future<void> main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
+  // Listen to auth state changes for proactive session management
+  Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    final AuthChangeEvent event = data.event;
+    final Session? session = data.session;
+    
+    if (event == AuthChangeEvent.tokenRefreshed) {
+      print('--- Supabase Auth: Token Refreshed Successfully ---');
+    } else if (event == AuthChangeEvent.signedOut) {
+      print('--- Supabase Auth: User Signed Out ---');
+    }
+  });
+
   runApp(
     const ProviderScope(
       child: NileEmergencyApp(),

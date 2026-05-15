@@ -10,6 +10,7 @@ class SOSService {
   Future<void> triggerSOS({
     required String category,
     required String severity,
+    String location = 'Nile Campus',
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) return;
@@ -33,7 +34,7 @@ class SOSService {
       print('Location error: $e');
     }
 
-    // Ensure profile exists to avoid foreign key violation
+    // Ensure profile row exists to satisfy foreign key constraints
     final profileExists = await _supabase
         .from('profiles')
         .select()
@@ -41,18 +42,18 @@ class SOSService {
         .maybeSingle();
 
     if (profileExists == null) {
-      await _supabase.from('profiles').insert({
+      await _supabase.from('profiles').upsert({
         'id': user.id,
-        'full_name': 'Incomplete Profile',
+        'full_name': user.email?.split('@')[0] ?? 'User', 
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      }, onConflict: 'id');
     }
 
     await _supabase.from('emergency_alerts').insert({
       'user_id': user.id,
       'category': category,
       'severity': severity,
-      'location': 'Nile Campus', // Still set text location for UI
+      'location': location, 
       'latitude': position?.latitude,
       'longitude': position?.longitude,
       'status': 'pending',

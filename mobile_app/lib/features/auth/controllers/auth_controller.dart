@@ -26,15 +26,16 @@ class AuthController {
       final user = res.user;
       if (user == null) throw 'Registration failed: No user created';
 
-      // 2. Insert into Profiles Table
-      await _supabase.from('profiles').insert({
+      // 2. Upsert into Profiles Table
+      // Using upsert handles cases where a Supabase trigger might have already created a profile
+      await _supabase.from('profiles').upsert({
         'id': user.id,
         'full_name': fullName,
-        'student_id': studentId, // Keep original ID here
+        'student_id': studentId,
         'blood_group': bloodGroup,
         'allergies': allergies,
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      }, onConflict: 'id');
 
     } catch (e) {
       throw e.toString();
@@ -45,5 +46,9 @@ class AuthController {
      final sanitizedId = studentId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toLowerCase();
      final email = '$sanitizedId@nile.edu.ng';
      await _supabase.auth.signInWithPassword(email: email, password: password);
+  }
+
+  Future<void> signOut() async {
+    await _supabase.auth.signOut();
   }
 }

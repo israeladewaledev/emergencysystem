@@ -8,7 +8,7 @@ const outfit = Outfit({
 });
 
 export const metadata = {
-  title: "Nile Emergency | BTDCS Portal",
+  title: "Nile Emergency | Admin Portal",
   description: "Advanced Emergency Response System for Nile University",
 };
 

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_colors.dart';
 import '../controllers/profile_controller.dart';
+import '../../auth/controllers/auth_controller.dart';
+import '../../auth/screens/welcome_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -223,6 +225,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   label: 'Change Password',
                   value: 'Last updated 3 months ago',
                   onTap: () {},
+                ),
+
+                const SizedBox(height: 32),
+
+                // Logout Button
+                FadeInUp(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            title: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.bold)),
+                            content: const Text('Are you sure you want to sign out of the system?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true), 
+                                child: const Text('Sign Out', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirmed == true) {
+                          await ref.read(authControllerProvider).signOut();
+                          if (mounted) {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                              (route) => false,
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade50,
+                        foregroundColor: Colors.red,
+                        elevation: 0,
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        side: BorderSide(color: Colors.red.withOpacity(0.1)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.logout_rounded, size: 20),
+                          const SizedBox(width: 12),
+                          Text('SIGN OUT', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
 
                 const SizedBox(height: 48),
