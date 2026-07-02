@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import "../../history/screens/first_aid_guidance_screen.dart";
 import "../../history/screens/emergency_history_screen.dart";
 import "../../history/screens/emergency_contacts_screen.dart";
@@ -8,27 +9,29 @@ import 'package:animate_do/animate_do.dart';
 import '../../../core/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../controllers/alert_controller.dart';
+import '../services/sos_service.dart';
 import 'emergency_status_screen.dart';
 import '../widgets/sos_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class SOSHomeScreen extends StatelessWidget {
+class SOSHomeScreen extends ConsumerWidget {
   const SOSHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Match light background from design
+      backgroundColor: Colors.grey[50],
       body: Stack(
         children: [
           SafeArea(
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics(),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
                 ),
-                child: Consumer(
-                  builder: (context, ref, child) {
+                child: Builder(
+                  builder: (context) {
                     final alertAsync = ref.watch(latestAlertProvider);
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -90,13 +93,10 @@ class SOSHomeScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           child: Center(
                             child: SOSButton(
-                              onTriggered: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const TriageQuestionnaireScreen(),
-                                  ),
-                                );
+                              onTriggered: () => _handleSOSTrigger(context, ref),
+                              onLongPress: () {
+                                HapticFeedback.heavyImpact();
+                                _showSOSOptionsSheet(context, ref);
                               },
                             ),
                           ),
@@ -300,6 +300,181 @@ class SOSHomeScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _handleSOSTrigger(BuildContext context, WidgetRef ref) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppColors.emergencyRed),
+      ),
+    );
+
+    try {
+      final alertId = await ref.read(sosServiceProvider).triggerSOS(
+        category: 'Medical Emergency',
+        severity: 'Medium',
+      );
+      
+      if (context.mounted) {
+        Navigator.pop(context); // Dismiss loader
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TriageQuestionnaireScreen(alertId: alertId),
+          ),
+        );
+      }
+    } catch(e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Dismiss loader
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to trigger SOS immediately: $e"),
+            backgroundColor: AppColors.emergencyRed,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSOSOptionsSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Emergency Options',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Select how you would like to reach responders',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final Uri launchUri = Uri(
+                          scheme: 'tel',
+                          path: '08033333333',
+                        );
+                        if (await canLaunchUrl(launchUri)) {
+                          await launchUrl(launchUri);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Could not launch phone dialer")),
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: Colors.blue.withOpacity(0.12)),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: const BoxDecoration(
+                                color: Colors.blue,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.phone_in_talk_rounded, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Voice Call',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _handleSOSTrigger(context, ref);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        decoration: BoxDecoration(
+                          color: AppColors.emergencyRed.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.emergencyRed.withOpacity(0.12)),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: const BoxDecoration(
+                                color: AppColors.emergencyRed,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.emergency_share_rounded, color: Colors.white, size: 28),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Trigger SOS',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.emergencyRed,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

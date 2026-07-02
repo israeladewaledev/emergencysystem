@@ -72,9 +72,62 @@ class EmergencyStatusScreen extends ConsumerWidget {
           }
 
           final status = (alert['status'] ?? 'pending').toString().toLowerCase();
+          final isResolved = status == 'resolved';
+          final isCancelled = status == 'cancelled';
           final isAccepted = status == 'accepted' || status == 'dispatched';
           final isOnSite = status == 'on_site';
+          final alertId = alert['id'].toString();
           
+          if (isResolved || isCancelled) {
+            return Center(
+              child: FadeInUp(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: isResolved ? Colors.green.shade50 : Colors.red.shade50,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isResolved ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                          color: isResolved ? Colors.green : Colors.red,
+                          size: 80,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Text(
+                        isResolved ? 'Emergency Resolved' : 'Emergency Cancelled',
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        isResolved 
+                          ? 'Your responder has marked this case as completed. We hope you are safe.'
+                          : 'This request has been cancelled.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 16),
+                      ),
+                      const SizedBox(height: 48),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          minimumSize: const Size(double.infinity, 64),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
+                        child: const Text('RETURN TO HOME', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
           return Stack(
             children: [
               SingleChildScrollView(
@@ -395,7 +448,7 @@ class EmergencyStatusScreen extends ConsumerWidget {
                     color: AppColors.info,
                     onTap: () {
                       Navigator.pop(context);
-                      final roomUrl = 'https://meet.jit.si/NileEmergency_${alertId ?? 'general'}';
+                      final roomUrl = 'https://meet.ffmuc.net/NileEmergency-${alertId?.substring(0, 8) ?? 'general'}#config.prejoinPageEnabled=false&config.disableDeepLinking=true&interfaceConfig.SHOW_JITSI_WATERMARK=false&interfaceConfig.SHOW_WATERMARK_FOR_GUESTS=false';
                       launchUrl(Uri.parse(roomUrl), mode: LaunchMode.externalApplication);
                     },
                   ),

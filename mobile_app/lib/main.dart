@@ -14,15 +14,28 @@ Future<void> main() async {
     anonKey: SupabaseConfig.anonKey,
   );
 
-  // Listen to auth state changes for proactive session management
+  final session = Supabase.instance.client.auth.currentSession;
+  if (session != null && session.isExpired) {
+    try {
+      // Attempt refresh but don't block the UI if it takes too long
+      // Actually, Supabase handles refreshing internally when you make requests, 
+      // but we do it here once to be sure.
+      await Supabase.instance.client.auth.refreshSession();
+      print('--- Supabase Auth: Session refreshed at startup ---');
+    } catch (_) {
+      // If refresh fails, we'll let the routing logic handle it or 
+      // let the user try to perform an action which will then trigger logout.
+      print('--- Supabase Auth: Refresh failed at startup ---');
+    }
+  }
+
+  // Listen to auth state changes for debugging
   Supabase.instance.client.auth.onAuthStateChange.listen((data) {
     final AuthChangeEvent event = data.event;
-    final Session? session = data.session;
-    
     if (event == AuthChangeEvent.tokenRefreshed) {
-      print('--- Supabase Auth: Token Refreshed Successfully ---');
+      print('--- Supabase Auth: Token Refreshed ---');
     } else if (event == AuthChangeEvent.signedOut) {
-      print('--- Supabase Auth: User Signed Out ---');
+      print('--- Supabase Auth: Signed Out ---');
     }
   });
 
@@ -38,13 +51,14 @@ class NileEmergencyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+    // Persist login if session exists (even if expired, it might be refreshable)
+    final isLoggedIn = session != null;
     return MaterialApp(
       title: 'Nile Emergency',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: Supabase.instance.client.auth.currentSession != null 
-          ? const SOSHomeScreen() 
-          : const WelcomeScreen(),
+      home: isLoggedIn ? const SOSHomeScreen() : const WelcomeScreen(),
     );
   }
 }

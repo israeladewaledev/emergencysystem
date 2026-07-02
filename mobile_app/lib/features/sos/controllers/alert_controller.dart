@@ -5,12 +5,15 @@ final latestAlertProvider = StreamProvider<Map<String, dynamic>?>((ref) async* {
   final client = Supabase.instance.client;
   final session = client.auth.currentSession;
   
-  // Proactively refresh session if it's expired or near expiry
+  // If session is expired, try to refresh. If refresh fails, sign out.
   if (session != null && session.isExpired) {
     try {
       await client.auth.refreshSession();
     } catch (e) {
-      print('Session refresh error: $e');
+      print('Session refresh failed, signing out: $e');
+      await client.auth.signOut();
+      yield null;
+      return;
     }
   }
 
@@ -37,7 +40,10 @@ final historyAlertsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) a
     try {
       await client.auth.refreshSession();
     } catch (e) {
-      print('History session refresh error: $e');
+      print('History session refresh failed, signing out: $e');
+      await client.auth.signOut();
+      yield [];
+      return;
     }
   }
 

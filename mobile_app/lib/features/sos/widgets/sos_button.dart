@@ -4,11 +4,13 @@ import '../../../core/theme/app_colors.dart';
 
 class SOSButton extends StatefulWidget {
   final VoidCallback onTriggered;
+  final VoidCallback? onLongPress;
   final int holdDurationSeconds;
 
   const SOSButton({
     super.key,
     required this.onTriggered,
+    this.onLongPress,
     this.holdDurationSeconds = 3,
   });
 
@@ -17,27 +19,15 @@ class SOSButton extends StatefulWidget {
 }
 
 class _SOSButtonState extends State<SOSButton> with TickerProviderStateMixin {
-  late AnimationController _holdController;
   late AnimationController _heartbeatController;
   late AnimationController _rippleController;
   
   late Animation<double> _heartbeatAnimation;
-  late Animation<double> _rippleAnimation;
-  late Animation<double> _rippleOpacity;
-  
-  bool _isHolding = false;
-  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     
-    // Hold Controller
-    _holdController = AnimationController(
-      vsync: this,
-      duration: Duration(seconds: widget.holdDurationSeconds),
-    );
-
     // Heartbeat Controller
     _heartbeatController = AnimationController(
       vsync: this,
@@ -54,45 +44,13 @@ class _SOSButtonState extends State<SOSButton> with TickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 3000),
     )..repeat();
-
-    _rippleAnimation = Tween<double>(begin: 0.8, end: 2.2).animate(
-      CurvedAnimation(parent: _rippleController, curve: Curves.linear),
-    );
-    _rippleOpacity = Tween<double>(begin: 0.5, end: 0.0).animate(
-      CurvedAnimation(parent: _rippleController, curve: Curves.linear),
-    );
   }
 
   @override
   void dispose() {
-    _holdController.dispose();
     _heartbeatController.dispose();
     _rippleController.dispose();
-    _timer?.cancel();
     super.dispose();
-  }
-
-  void _startHold() {
-    setState(() => _isHolding = true);
-    _holdController.forward();
-    _timer = Timer(Duration(seconds: widget.holdDurationSeconds), () {
-      if (_isHolding) {
-        widget.onTriggered();
-        _reset();
-      }
-    });
-  }
-
-  void _endHold() {
-    if (_holdController.value < 1.0) {
-      _reset();
-    }
-  }
-
-  void _reset() {
-    setState(() => _isHolding = false);
-    _holdController.reverse();
-    _timer?.cancel();
   }
 
   @override
@@ -101,9 +59,8 @@ class _SOSButtonState extends State<SOSButton> with TickerProviderStateMixin {
       mainAxisSize: MainAxisSize.min,
       children: [
         GestureDetector(
-          onTapDown: (_) => _startHold(),
-          onTapUp: (_) => _endHold(),
-          onTapCancel: () => _reset(),
+          onTap: widget.onTriggered,
+          onLongPress: widget.onLongPress,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -152,7 +109,6 @@ class _SOSButtonState extends State<SOSButton> with TickerProviderStateMixin {
                         offset: const Offset(0, 20),
                       ),
                     ],
-                    // Carbon fiber texture simulation via inner shadow or similar
                   ),
                   child: const Center(
                     child: Column(
@@ -189,46 +145,23 @@ class _SOSButtonState extends State<SOSButton> with TickerProviderStateMixin {
         ),
         const SizedBox(height: 60),
         
-        // Progress Section
-        SizedBox(
-          width: 200,
+        // Simplified Text
+        const SizedBox(
+          width: 240,
           child: Column(
             children: [
-              const Text(
-                'Press & Hold',
+              Text(
+                'Instant Emergency Signal',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
               ),
-              const SizedBox(height: 12),
-              Container(
-                height: 6,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: AnimatedBuilder(
-                  animation: _holdController,
-                  builder: (context, child) {
-                    return FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: _holdController.value,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.emergencyRed,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
               const SizedBox(height: 8),
-              const Text(
-                'for 3 seconds to alert security',
+              Text(
+                'Tap to send SOS • Hold for options',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
                   color: Colors.grey,
@@ -242,3 +175,4 @@ class _SOSButtonState extends State<SOSButton> with TickerProviderStateMixin {
     );
   }
 }
+

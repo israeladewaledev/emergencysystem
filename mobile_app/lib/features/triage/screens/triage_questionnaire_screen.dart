@@ -6,7 +6,8 @@ import '../../sos/services/sos_service.dart';
 import '../../../core/theme/app_colors.dart';
 
 class TriageQuestionnaireScreen extends ConsumerStatefulWidget {
-  const TriageQuestionnaireScreen({super.key});
+  final String alertId;
+  const TriageQuestionnaireScreen({super.key, required this.alertId});
 
   @override
   ConsumerState<TriageQuestionnaireScreen> createState() => _TriageQuestionnaireScreenState();
@@ -281,9 +282,16 @@ class _TriageQuestionnaireScreenState extends ConsumerState<TriageQuestionnaireS
         builder: (context) => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
 
-      await ref.read(sosServiceProvider).triggerSOS(
+      final triageAnswers = {
+        for (int i = 0; i < _questions.length; i++)
+          (_questions[i]['question'] as String): (_answers[i] ?? 'Not answered')
+      };
+
+      await ref.read(sosServiceProvider).updateSOSTriage(
+        alertId: widget.alertId,
         category: _category,
         severity: severity,
+        triageAnswers: triageAnswers,
       );
 
       print('SOS Service Call Successful');

@@ -7,13 +7,14 @@ final sosServiceProvider = Provider((ref) => SOSService());
 class SOSService {
   final _supabase = Supabase.instance.client;
 
-  Future<void> triggerSOS({
+  Future<String> triggerSOS({
     required String category,
     required String severity,
     String location = 'Nile Campus',
+    Map<String, String>? triageAnswers,
   }) async {
     final user = _supabase.auth.currentUser;
-    if (user == null) return;
+    if (user == null) throw Exception("User not authenticated");
 
     // Get current position (with permission handling)
     Position? position;
@@ -49,7 +50,7 @@ class SOSService {
       }, onConflict: 'id');
     }
 
-    await _supabase.from('emergency_alerts').insert({
+    final data = await _supabase.from('emergency_alerts').insert({
       'user_id': user.id,
       'category': category,
       'severity': severity,
@@ -57,8 +58,24 @@ class SOSService {
       'latitude': position?.latitude,
       'longitude': position?.longitude,
       'status': 'pending',
+      'triage_answers': triageAnswers,
       'created_at': DateTime.now().toIso8601String(),
-    });
+    }).select('id').single();
+
+    return data['id'] as String;
+  }
+
+  Future<void> updateSOSTriage({
+    required String alertId,
+    required String category,
+    required String severity,
+    required Map<String, String> triageAnswers,
+  }) async {
+    await _supabase.from('emergency_alerts').update({
+      'category': category,
+      'severity': severity,
+      'triage_answers': triageAnswers,
+    }).eq('id', alertId);
   }
 
   Stream<List<Map<String, dynamic>>> getMyAlerts() {
