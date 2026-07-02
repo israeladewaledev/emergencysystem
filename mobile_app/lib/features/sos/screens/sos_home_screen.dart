@@ -93,7 +93,10 @@ class SOSHomeScreen extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(vertical: 20),
                           child: Center(
                             child: SOSButton(
-                              onTriggered: () => _handleSOSTrigger(context, ref),
+                              onTriggered: () {
+                                HapticFeedback.heavyImpact();
+                                _showSOSOptionsSheet(context, ref);
+                              },
                               onLongPress: () {
                                 HapticFeedback.heavyImpact();
                                 _showSOSOptionsSheet(context, ref);
