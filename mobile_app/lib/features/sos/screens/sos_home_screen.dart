@@ -388,6 +388,36 @@ class SOSHomeScreen extends ConsumerWidget {
                     child: GestureDetector(
                       onTap: () async {
                         Navigator.pop(context);
+                        
+                        // Show loader indicator
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => const Center(
+                            child: CircularProgressIndicator(color: AppColors.emergencyRed),
+                          ),
+                        );
+
+                        try {
+                          // Trigger SOS record for the voice call
+                          await ref.read(sosServiceProvider).triggerSOS(
+                            category: 'Voice Call',
+                            severity: 'High',
+                          );
+                        } catch (e) {
+                          print("Failed to auto-report voice call SOS: $e");
+                        }
+
+                        if (context.mounted) {
+                          Navigator.pop(context); // Dismiss loader
+                          
+                          // Push EmergencyStatusScreen so responders can track/arrive
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const EmergencyStatusScreen()),
+                          );
+                        }
+
                         final Uri launchUri = Uri(
                           scheme: 'tel',
                           path: '08033333333',
@@ -395,9 +425,11 @@ class SOSHomeScreen extends ConsumerWidget {
                         if (await canLaunchUrl(launchUri)) {
                           await launchUrl(launchUri);
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Could not launch phone dialer")),
-                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Could not launch phone dialer")),
+                            );
+                          }
                         }
                       },
                       child: Container(
